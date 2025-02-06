@@ -1,0 +1,484 @@
+---
+title: "HEART DISEASE RISK ANALYSIS"
+author: "CHRISTINA THOMPSON ACQUAH"
+date: " "
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: yes
+    code_folding: hide
+    code_download: yes
+    smooth_scroll: yes
+    theme: lumen
+  word_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    keep_md: yes
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    number_sections: no
+    fig_width: 3
+    fig_height: 3
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{=html}
+
+<style type="text/css">
+
+/* Cascading Style Sheets (CSS) is a stylesheet language used to describe the presentation of a document written in HTML or XML. it is a simple mechanism for adding style (e.g., fonts, colors, spacing) to Web documents. */
+
+h1.title {  /* Title - font specifications of the report title */
+  font-size: 22px;
+  font-weight: bold;
+  color: DarkRed;
+  text-align: center;
+  font-family: "Gill Sans", sans-serif;
+}
+h4.author { /* Header 4 - font specifications for authors  */
+  font-size: 18px;
+  font-weight: bold;
+  font-family: system-ui;
+  color: navy;
+  text-align: center;
+}
+h4.date { /* Header 4 - font specifications for the date  */
+  font-size: 18px;
+  font-family: system-ui;
+  color: DarkBlue;
+  text-align: center;
+  font-weight: bold;
+}
+h1 { /* Header 1 - font specifications for level 1 section title  */
+    font-size: 22px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: center;
+    font-weight: bold;
+}
+h2 { /* Header 2 - font specifications for level 2 section title */
+    font-size: 20px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+    font-weight: bold;
+}
+
+h3 { /* Header 3 - font specifications of level 3 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h4 { /* Header 4 - font specifications of level 4 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+body { background-color:white; }
+
+.highlightme { background-color:yellow; }
+
+p { background-color:white; }
+
+</style>
+```
+
+```{r setup, include=FALSE}
+# code chunk specifies whether the R code, warnings, and output will be included in the output files.
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+library(tidyverse)
+}
+if (!require("palmerpenguins")) {
+   install.packages("palmerpenguins")
+library(palmerpenguins)
+}
+if (!require("plotly")) {
+   install.packages("plotly")
+library(plotly)
+}
+if (!require("GGally")) {
+   install.packages("GGally")
+library(GGally)
+}
+if (!require("naniar")) {
+   install.packages("naniar")
+library(naniar)
+}
+if (!require("pool")) {
+   install.packages("pool")
+library(pool)
+}
+if (!require("DBI")) {
+   install.packages("DBI")
+library(DBI)
+}
+if (!require("RMySQL")) {
+   install.packages("RMySQL")
+library(RMySQL)
+}
+if (!require("randomForest")) {
+   install.packages("randomForest")
+library(randomForest)
+}
+if (!require("ggiraph")) {
+   install.packages("ggiraph")
+library(ggiraph)
+}
+if (!require("highcharter")) {
+   install.packages("highcharter")
+library(highcharter)
+}
+if (!require("broom")) {
+   install.packages("broom")
+library(broom)
+}
+## 
+knitr::opts_chunk$set(
+  # include code chunk in the output file
+  echo = TRUE,
+  # sometimes, you code may produce warning messages, you can choose to include the warning messages in the output file.
+  warning = FALSE, 
+  # you can also decide whether to include the output in the output file.
+  results = TRUE, 
+  message = FALSE,
+  comment = NA
+)  
+
+```
+
+# **1. Introduction**
+
+## **Description of Data**
+This dataset was obtained from [Kaggle](https://www.kaggle.com/datasets/oktayrdeki/heart-disease).This dataset contains health and risk factors related to the heart disease. The dataset involves parameters such as diabetes,stress level, smoking,age,gender among others to analyse the risk of heart disease and contribute effectively to health research. This dataset can be used to study the factors that contribute to the development of heart diseases.
+
+## Purpose of Data Collection
+
+The purpose of the collection of this data was to
+
+- Find out the factors that influence the risk of heart diseases
+
+- Explore the relationship between various risk factors
+
+## Data Collection Process
+The dataset was sourced from Kaggle, specifically from the Heart Disease dataset provided by Oktay Rdeki. It compiles health records and survey data from various patients, detailing risk factors and their association with heart disease.
+The dataset was collected from medical records and health surveys from 10,000 patients over a period of five years in multiple hospitals across the United States. It includes self-reported behaviors (e.g., smoking, alcohol consumption) and medically recorded variables (e.g., cholesterol level, blood pressure). It consist of 9 numerical and 12 categorical variables.
+
+# Data Exploration
+
+```{r}
+
+data<- read.csv("https://raw.githubusercontent.com/Christina-tinaa/Heart-Disease/main/heart_disease.csv")
+
+library(tidyverse)
+
+str(data)
+summary(data)
+
+```
+
+## *Itemized List of Feature Variables*
+```{r }
+
+# Define the feature variables with their descriptions and data types
+features <- data.frame(
+  Feature_Name = c("Age", "Gender", "Blood Pressure", "Cholesterol Level", "Exercise Habits",
+                   "Smoking", "Family Heart Disease", "Diabetes", "BMI", "High Blood Pressure",
+                   "Low HDL Cholesterol", "High LDL Cholesterol", "Alcohol Consumption",
+                   "Stress Level", "Sleep Hours", "Sugar Consumption", "Triglyceride Level",
+                   "Fasting Blood Sugar", "CRP Level", "Homocysteine Level", "Heart Disease Status"),
+  
+  Description = c("The individual's age", "The individual's gender (Male or Female)",
+                  "The individual's blood pressure (systolic)", "The individual's total cholesterol level",
+                  "The individual's exercise habits (Low, Medium, High)", "Whether the individual smokes or not (Yes or No)",
+                  "Whether there is a family history of heart disease (Yes or No)", "Whether the individual has diabetes (Yes or No)",
+                  "The individual's body mass index", "Whether the individual has high blood pressure (Yes or No)",
+                  "Whether the individual has low HDL cholesterol (Yes or No)", "Whether the individual has high LDL cholesterol (Yes or No)",
+                  "The individual's alcohol consumption level (None, Low, Medium, High)",
+                  "The individual's stress level (Low, Medium, High)", "The number of hours the individual sleeps",
+                  "The individual's sugar consumption level (Low, Medium, High)", "The individual's triglyceride level",
+                  "The individual's fasting blood sugar level", "The C-reactive protein level (a marker of inflammation)",
+                  "The individual's homocysteine level (an amino acid that affects blood vessel health)",
+                  "The individual's heart disease status (Yes or No)"),
+  
+  Data_Type = c("Numerical", "Categorical", "Numerical", "Numerical", "Categorical",
+                "Categorical", "Categorical", "Categorical", "Numerical", "Categorical",
+                "Categorical", "Categorical", "Categorical",
+                "Categorical", "Numerical", "Categorical", "Numerical",
+                "Numerical", "Numerical", "Numerical", "Categorical")
+)
+
+# Print the table
+kable(features)
+```
+
+## Purposes of Using This Data Set
+This dataset will be used to:
+
+1. Identify significant risk factors associated with heart disease.
+
+2. Examine interactions between lifestyle, biochemical markers, and cardiovascular health.
+
+3. Develop predictive models for heart disease risk assessment.
+
+## Problem Statements
+- What are the primary predictors of heart disease?
+- How do lifestyle factors (e.g., smoking, exercise, alcohol consumption) impact heart disease risk?
+- What is the relationship between cholesterol levels and other biochemical markers?
+
+
+# Distribution of Individual Features
+
+Several features have missing values, particularly in health-related metrics.Missing data can impact modeling accuracy and must be addressed via imputation techniques.
+
+
+Preparing for analysis requires the following tasks:
+
+1. Handling Missing Values
+2. Addressing Outliers
+
+## Handling Missing Values
+
+`heart_disease` has missing values for some variables, these missing values are as follows `Age`, `cholestrol level`, `blood pressure`, `BMI`, `Sleep hours`, `cholestrol level`, `Triglyceride.Level`, `Fasting.Blood.Sugar`, `CRP Level`, and `Homocysteine.Level`. To handle observations with missing data, imputation will be performed prior to analysis.
+
+
+```{r}
+# PLOTTING MISSING VALUES
+
+# Generating data frame of missing values per variable
+MissingVal <- data.frame(
+  Variables = names(data),
+  Missing = colSums(is.na(data))
+)
+
+# Generating interactive plot using plotly
+Plot_MissingVal <- 
+  # Taking a subset of MissingVal, so only entries with > 0 missing values will be displayed
+  subset(MissingVal, Missing > 0) %>% 
+  # Passing the subset to plot_ly
+  plot_ly(
+    x = ~Variables,
+    y = ~Missing
+  ) %>% 
+  layout(
+    title = list(
+      text = "Missing Values per Variable"
+    ),
+    xaxis = list(
+      title = "Variables with Missing Values",
+      categoryorder = "trace"
+    ),
+    yaxis = list(
+      title = "Number of Missing Values"
+    )
+  )
+
+# Outputting plot
+Plot_MissingVal
+```
+
+
+## Addressing Outliers
+Of particular note is the wide variability in Triglyceride Level and Fasting Blood Sugar. Typical triglyceride levels are classified as follows: normal (<150 mg/dL), borderline high (150–199 mg/dL), high (200–499 mg/dL), and very high (>500 mg/dL). For fasting blood sugar, normal levels range between 70–100 mg/dL, while levels above 125 mg/dL are indicative of diabetes.
+
+However, there are some Triglyceride Level values exceeding 400 mg/dL and Fasting Blood Sugar values exceeding 300 mg/dL. Such extreme values may reflect individuals with severe underlying conditions (e.g., hypertriglyceridemia or poorly managed diabetes). If these values do not align with medical plausibility or diagnostic thresholds, they could also represent measurement errors or data entry issues.
+
+```{r}
+# ====================
+# PLOTTING ALL NUMERICAL NON-BINARY VARIABLES
+# ====================
+
+# Selecting only numeric variables
+Numeric_Var <- select(data, where(is.numeric))
+
+# Eliminating any binary variables
+Numeric_Var <- Numeric_Var[!apply(Numeric_Var, 2, function(x){all(match(x, c(0, 1, NA), nomatch = FALSE))})]
+
+# Preparing a list of subplots
+Numeric_Fig <- c()
+# Using a for loop to generate a subplot per variable in Numeric_Var
+for(i in 1:length(names(Numeric_Var))){
+  Numeric_Fig[[i]] <- plot_ly(
+    x = Numeric_Var[[i]], 
+    y = "", 
+    type = "box",
+    name = colnames(Numeric_Var)[i]
+  )
+}
+
+# Generating a plot that contains 8 subplots (one for each variable in Numeric_Var) across 4 rows
+Plot_Numeric_Var <- 
+  subplot(Numeric_Fig[[1]], Numeric_Fig[[2]], Numeric_Fig[[3]], Numeric_Fig[[4]], Numeric_Fig[[5]], Numeric_Fig[[6]], Numeric_Fig[[7]], Numeric_Fig[[8]], nrows = 4, margin = 0.05) %>% 
+  layout(
+    title = "Distributions of All Numerical Non-binary Variables",
+    legend = list(
+      title = list(text = "<b> Variable </b>"),
+      bgcolor = "yellow",
+      bordercolor = "orange",
+      borderwidth = 2
+    )
+  )
+
+# Outputting plot
+Plot_Numeric_Var
+```
+# Relationship Between Features
+
+## `Cholesterol Level` and `Triglyceride Level`
+
+There appears to be no strong visible linear trend between cholesterol and triglyceride levels. Both variables have a wide distribution across all values.
+
+```{r}
+# Generating plot
+CT <- 
+  plot_ly(
+    data = data,
+    x = ~Cholesterol.Level,
+    y = ~Triglyceride.Level
+  ) %>% 
+  layout(
+    title = "Cholesterol Level and Triglyceride Level",
+    xaxis = list(title = "Cholesterol Level"),
+    yaxis = list(title = "Triglyceride Level")
+  )
+
+# Outputting plot
+CT
+```
+
+## `Gender` and `Exercise Habits`
+
+Both males and females show similar patterns in exercise habits, with the highest count in "high exercise" and similar distributions across "medium" and "low" categories.
+
+```{r}
+# Preparing plot data
+Gender_Exercise <- 
+  data %>%
+  group_by(Gender, Exercise.Habits) %>%
+  summarise(Count = n())
+
+# Generating plot
+GE <- plot_ly()
+GE <- GE %>% 
+  add_trace(
+    data = subset(Gender_Exercise, Exercise.Habits == "Low"),
+    x = ~Gender,
+    y = ~Count,
+    name = "Low"
+  ) %>% 
+  add_trace(
+    data = subset(Gender_Exercise, Exercise.Habits == "Medium"),
+    x = ~Gender,
+    y = ~Count,
+    name = "Medium"
+  ) %>%
+  add_trace(
+    data = subset(Gender_Exercise, Exercise.Habits == "High"),
+    x = ~Gender,
+    y = ~Count,
+    name = "High"
+  ) %>% 
+  layout(
+    title = "Gender and Exercise Habits",
+    xaxis = list(title = "Gender"),
+    yaxis = list(title = "Count"),
+    legend = list(
+      title = list(text = "<b> Exercise Habits </b>"),
+      bgcolor = "#E2E2E2",
+      bordercolor = "#FFFFFF",
+      borderwidth = 2
+    )
+  )
+
+# Outputting plot
+GE
+```
+
+## `Alcohol Consumption` and `Heart Disease Status`
+
+Most individuals who consume alcohol at low, medium, or no levels do not have heart disease. However, the number of individuals with heart disease is consistent across these categories.
+
+```{r}
+# Preparing plot data
+Alcohol_HeartDisease <- 
+  data %>%
+  group_by(Alcohol.Consumption, Heart.Disease.Status) %>%
+  summarise(Count = n())
+
+# Generating plot
+AH <- plot_ly() %>% 
+  add_trace(
+    data = Alcohol_HeartDisease,
+    x = ~Alcohol.Consumption, 
+    y = ~Count, 
+    type = "bar",
+    color = ~Heart.Disease.Status
+  ) %>% 
+  layout(
+    title = "Alcohol Consumption and Heart Disease Status",
+    xaxis = list(title = "Alcohol Consumption"),
+    yaxis = list(title = "Count"),
+    legend = list(
+      title = list(text = "<b> Heart Disease Status </b>"),
+      bgcolor = "#E2E2E2",
+      bordercolor = "#FFFFFF",
+      borderwidth = 2
+    )
+  )
+
+# Outputting plot
+AH
+```
+
+## `Cholesterol Level`, `Triglyceride Level`, and `BMI`
+
+The 3D scatterplot shows no clear clustering or pattern among these three variables. BMI, cholesterol, and triglycerides are spread widely across all ranges.
+
+```{r}
+# Generating plot
+CTB <- plot_ly() %>% 
+  add_trace(
+    data = data,
+    x = ~Cholesterol.Level, 
+    y = ~Triglyceride.Level, 
+    z = ~BMI,
+    marker = list(size = 2),
+    hovertemplate = paste(
+      "<b>Cholesterol Level</b>: %{x}<br>",
+      "<b>Triglyceride Level</b>: %{y}<br>",
+      "<b>BMI</b>: %{z}"
+    ),
+    name = ""
+  ) %>%
+  layout(
+    title = "Cholesterol Level, Triglyceride Level, and BMI",
+    scene = list(
+      xaxis = list(title = "Cholesterol Level"),
+      yaxis = list(title = "Triglyceride Level"),
+      zaxis = list(title = "BMI"),
+      aspectmode = "cube"
+    )
+  )
+
+# Outputting plot
+CTB
+```
+
+
+
+
