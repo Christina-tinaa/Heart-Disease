@@ -1,0 +1,758 @@
+---
+title: "IMPUTATION METHODS(HEART DISEASE)"
+author: "CHRISTINA THOMPSON ACQUAH"
+date: " "
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: yes
+    code_folding: hide
+    code_download: yes
+    smooth_scroll: yes
+    theme: lumen
+  word_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    keep_md: yes
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    number_sections: no
+    fig_width: 3
+    fig_height: 3
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{=html}
+
+<style type="text/css">
+
+/* Cascading Style Sheets (CSS) is a stylesheet language used to describe the presentation of a document written in HTML or XML. it is a simple mechanism for adding style (e.g., fonts, colors, spacing) to Web documents. */
+
+h1.title {  /* Title - font specifications of the report title */
+  font-size: 22px;
+  font-weight: bold;
+  color: DarkRed;
+  text-align: center;
+  font-family: "Gill Sans", sans-serif;
+}
+h4.author { /* Header 4 - font specifications for authors  */
+  font-size: 18px;
+  font-weight: bold;
+  font-family: system-ui;
+  color: navy;
+  text-align: center;
+}
+h4.date { /* Header 4 - font specifications for the date  */
+  font-size: 18px;
+  font-family: system-ui;
+  color: DarkBlue;
+  text-align: center;
+  font-weight: bold;
+}
+h1 { /* Header 1 - font specifications for level 1 section title  */
+    font-size: 22px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: center;
+    font-weight: bold;
+}
+h2 { /* Header 2 - font specifications for level 2 section title */
+    font-size: 20px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+    font-weight: bold;
+}
+
+h3 { /* Header 3 - font specifications of level 3 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h4 { /* Header 4 - font specifications of level 4 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+body { background-color:white; }
+
+.highlightme { background-color:yellow; }
+
+p { background-color:white; }
+
+</style>
+```
+
+```{r setup, include=FALSE}
+# code chunk specifies whether the R code, warnings, and output will be included in the output files.
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+library(tidyverse)
+}
+if (!require("palmerpenguins")) {
+   install.packages("palmerpenguins")
+library(palmerpenguins)
+}
+if (!require("plotly")) {
+   install.packages("plotly")
+library(plotly)
+}
+if (!require("GGally")) {
+   install.packages("GGally")
+library(GGally)
+}
+if (!require("naniar")) {
+   install.packages("naniar")
+library(naniar)
+}
+if (!require("pool")) {
+   install.packages("pool")
+library(pool)
+}
+if (!require("DBI")) {
+   install.packages("DBI")
+library(DBI)
+}
+if (!require("RMySQL")) {
+   install.packages("RMySQL")
+library(RMySQL)
+}
+if (!require("randomForest")) {
+   install.packages("randomForest")
+library(randomForest)
+}
+if (!require("ggiraph")) {
+   install.packages("ggiraph")
+library(ggiraph)
+}
+if (!require("highcharter")) {
+   install.packages("highcharter")
+library(highcharter)
+}
+if (!require("broom")) {
+   install.packages("broom")
+library(broom)
+}
+## 
+knitr::opts_chunk$set(
+  # include code chunk in the output file
+  echo = TRUE,
+  # sometimes, you code may produce warning messages, you can choose to include the warning messages in the output file.
+  warning = FALSE, 
+  # you can also decide whether to include the output in the output file.
+  results = TRUE, 
+  message = FALSE,
+  comment = NA
+)  
+
+```
+
+# **Introduction** 
+Missing values are a common issue in data analysis and machine learning, often resulting from data collection errors, equipment failures, or participant non-response in surveys. If not handled properly, missing data can lead to biased statistical estimates, reduced model accuracy, and unreliable predictions. Therefore, appropriate imputation techniques are necessary to ensure data completeness and improve model performance.
+
+## **Summary of Missing Value Imputation (Part I)**
+In the first part of this project, we explored four different approaches to handling missing values in a dataset:
+
+1. **Mode Imputation**: Replaced missing categorical values with the most frequently occurring category.
+2. **K-Nearest Neighbors (KNN) Imputation**: Used similarity-based learning to estimate missing categorical values.
+3. **Regression-Based Imputation**: Predicted missing numerical values using regression models, incorporating random error for variability.
+4. **Multiple Imputation (MICE)**: Created multiple plausible datasets by iteratively imputing missing values.
+
+Each method was evaluated based on its impact on data completeness and its effectiveness in preserving statistical relationships.
+
+
+## **Feature Engineering for Model Improvement (Part II)**
+Now, in this second part of the project, we focus on **feature engineering**—transforming, selecting, and creating new features to improve model performance.
+
+### **Observations from project #1**
+Exploratory Data Analysis (EDA) from **Project #1** revealed key feature-related issues that need to be addressed:
+
+- **Skewed Numerical Variables:** Certain continuous variables exhibited extreme skewness, which could distort statistical inferences and model predictions.
+
+- **Inconsistent Feature Scales:** Numerical features had different ranges, potentially affecting distance-based models like **KNN and regression-based models**.
+
+- **Feature Redundancy:** Some variables appeared to have little influence on predictions and could be removed to improve efficiency.
+
+- **Sparse Categorical Levels:** Several categorical variables contained rare categories, which might introduce instability into models.
+
+
+### **Feature Engineering Tasks**
+To address these issues, we will apply the following **feature engineering techniques**:
+
+1. **Feature Transformation**:
+   - **Skewness Correction**: Apply transformations (e.g., log, Box-Cox) to reduce skewness and stabilize variance.
+   - **Scaling & Standardization**: Normalize or standardize numerical features to ensure consistent ranges.
+
+2. **Feature Selection**:
+   - **Filter-based Selection**: Identify and remove irrelevant features based on statistical metrics (e.g., R², AIC, or log-likelihood ratios).
+   - **Regularization-based Selection**: Use Lasso or Ridge regression to prioritize meaningful features and reduce multicollinearity.
+
+3. **Feature Creation**:
+   - **Category Regrouping**: Merge sparse categorical levels to improve stability and interpretability.
+   - **Discretization of Multi-modal Variables**: Convert continuous variables into categorical bins to capture distinct patterns.
+   - **Model-Based Feature Engineering**: Extract new variables using PCA or clustering techniques if necessary.
+
+
+## **Implications**
+- **Skewness correction** ensures that features better conform to assumptions of normality in regression-based models.
+- **Scaling & standardization** allow machine learning models to process variables more effectively, especially for distance-based algorithms.
+- **Feature selection** helps prevent overfitting, reducing computational cost while maintaining model accuracy.
+- **Feature creation** enables models to capture **hidden patterns** in the data, improving predictive performance.
+
+Properly applying these feature engineering techniques **enhances the dataset’s quality**, leading to better model generalization and interpretability.
+
+
+### **Next Steps**
+The upcoming sections will:
+
+1. **Transform numerical variables** to correct skewness and improve distribution consistency.
+
+2. **Select key features** based on statistical relevance and model requirements.
+
+3. **Create new meaningful features** where needed to enhance model performance.
+
+Each technique will be implemented to ensure structure improvements to the dataset.
+
+# ** Replacement Imputation for Categorical Features**
+
+This section covers two techniques for handling missing values in categorical features:
+
+### Mode Imputation
+- **Definition:** A simple approach where missing values are replaced with the most frequently occurring category.
+- **Steps:**
+  - Identify categorical columns.
+  - Calculate the mode for each column.
+  - Replace missing values with the mode.
+- **Advantages:** Fast and efficient.
+- **Limitations:** May introduce bias if the dominant category is not representative.
+
+**Summary:**
+
+### **Findings:**
+- Categorical variables such as `Gender` and `Exercise_Habits` contained missing values.
+- **Mode Imputation** replaces missing values with the **most frequent category** in each variable.
+
+### **Results:**
+- Mode imputation successfully replaced missing values **without introducing new categories**.
+- It is a **quick and effective approach** when missingness is minimal.
+- However, this method **can introduce bias** if the most frequent category is **overrepresented** in the dataset.
+
+### **Implications:**
+- Suitable for cases where missing values occur **randomly (MCAR)** and in **small proportions**.
+- **Less effective** for datasets with **complex patterns** in missingness.
+
+
+```{r}
+library(tidyverse)
+
+# Loading the dataset
+heart_df<-read.csv("https://raw.githubusercontent.com/Christina-tinaa/Heart-Disease/main/heart_disease.csv")
+
+# View summary to identify missing values
+summary(heart_df)
+
+# Identify categorical columns
+categorical_cols <- heart_df %>%
+  select(where(is.factor), where(is.character))
+
+# Function to compute mode
+mode_impute <- function(x) {
+  ux <- unique(na.omit(x)) # Remove NA values
+  ux[which.max(tabulate(match(x, ux)))] # Find most frequent value
+}
+
+# Apply Mode Imputation directly to categorical columns in heart_df
+heart_df <- heart_df %>%
+  mutate(across(all_of(colnames(categorical_cols)), ~replace_na(., mode_impute(.))))
+
+# Verify missing values after imputation
+colSums(is.na(heart_df))
+
+# View a sample of the cleaned categorical features
+print(head(heart_df[colnames(categorical_cols)]))
+```
+
+
+### K-Nearest Neighbors (KNN) Imputation
+- **Definition:** This method imputes missing values based on the most common category among the k-nearest neighbors (with k=5).
+- **Steps:**
+  - Convert categorical variables to dummy variables (one-hot encoding).
+  - Apply the KNN algorithm to find neighbors.
+  - Impute missing values using the most frequent category from the neighbors.
+- **Advantages:** Preserves patterns and relationships between features.
+- **Limitations:** Computationally intensive and sensitive to outliers.
+
+**Summary:**
+
+### **Findings:**
+- KNN Imputation replaces missing categorical values by finding the most common category among **k-nearest neighbors**.
+- We used **k = 5**, meaning the five closest observations were considered for imputation.
+
+### **Results:**
+- Missing values were replaced based on **similar data points**, preserving category distributions.
+- Unlike **Mode Imputation**, KNN adapts to **relationships in the dataset**.
+- However, KNN is **computationally expensive** for large datasets.
+
+### **Implications:**
+- More **flexible and data-driven** compared to Mode Imputation.
+- Suitable when **data relationships can guide imputation**.
+- May **not work well for sparse datasets** or when missing values are concentrated in specific subgroups.
+
+```{r}
+if (!require(VIM)) {
+  install.packages("VIM")
+  library(VIM)
+}
+
+# Identify categorical columns with missing values
+categorical_cols <- heart_df %>%
+  select(where(is.factor), where(is.character)) %>%
+  colnames()  # Convert to a character vector
+
+# Apply KNN Imputation for Categorical Features
+set.seed(123)  # Ensures reproducibility
+heart_df_knn <- kNN(heart_df, variable = categorical_cols, k = 5)
+
+# Drop extra columns created by kNN() (which track imputed values)
+heart_df_knn <- heart_df_knn %>% select(-starts_with("imp_"))
+
+# Verify missing values after imputation
+colSums(is.na(heart_df_knn))
+
+# View a sample of the cleaned categorical features
+print(head(heart_df_knn %>% select(all_of(categorical_cols))))
+```
+
+# ** Regression-based Imputation for Numerical Features**
+### **Findings:**
+- `Cholesterol.Level` contained missing values.
+- A **linear regression model** was trained using complete cases, with `Age`, `Gender`, `BMI`, and `Blood.Pressure` as predictors.
+- Missing values were **predicted using the regression model** and adjusted with **random error** from model residuals.
+
+### **Results:**
+- Imputed values align well with the **original data distribution**.
+- Added **random error** ensures **variability** in predictions.
+- This method **preserves relationships** between variables better than simple imputation.
+
+### **Implications:**
+- Works well when **missing values are Missing at Random (MAR)**.
+- Can **introduce bias** if relationships are weak or assumptions of linearity are violated.
+- Preferred over **mean/median imputation** as it uses available data more effectively.
+
+
+```{r}
+
+# Creating a subset with feature variables and target response variable
+subset_df <- heart_df %>%
+  select(Age, Gender, BMI, Blood.Pressure, Cholesterol.Level) %>%
+  mutate(Gender = as.factor(Gender))  # Convert Gender to a categorical factor
+
+# Preparing data and fitting a linear regression model using complete cases
+train_data <- subset_df %>% drop_na(Cholesterol.Level)  # Remove rows with missing Cholesterol.Level
+lm_model <- lm(Cholesterol.Level ~ Age + Gender + BMI + Blood.Pressure, data = train_data)
+summary(lm_model)
+
+# Identifying missing rows
+missing_indices <- which(is.na(subset_df$Cholesterol.Level))  # Find row indices with missing values
+if (length(missing_indices) > 0) {  # Only proceed if there are missing values
+  
+  # Create a new dataset excluding Cholesterol.Level for prediction
+  missing_rows <- subset_df[missing_indices, ] %>% select(-Cholesterol.Level)
+
+  # Predict missing values
+  set.seed(123)  # Ensure reproducibility
+  predicted_values <- predict(lm_model, newdata = missing_rows)
+
+  # Adding random error based on model residuals
+  residuals <- resid(lm_model)
+  error_sd <- sd(residuals, na.rm = TRUE)
+  predicted_values_random <- predicted_values + rnorm(length(predicted_values), mean = 0, sd = error_sd)
+
+  # Impute missing values using index replacement instead of `replace_na()`
+  subset_df$Cholesterol.Level[missing_indices] <- predicted_values_random
+}
+
+# Print sample output
+print(head(subset_df))
+
+```
+
+# **Multiple Imputation**
+### **Findings:**
+- Multiple Imputation (MICE) was used to iteratively estimate and replace missing values.
+- MICE performed Predictive Mean Matching (PMM) to ensure realistic imputed values, avoiding extreme predictions.
+- A linear regression model was trained using the MICE-imputed dataset.
+- Model performance was compared against other imputation methods (Mode, KNN, and Regression-Based Imputation).
+
+### **Results:**
+- MICE did not significantly improve model performance, as indicated by its low R² (0.00085) and highest AIC (103881.1).
+- Regression results on the MICE-imputed dataset showed that BMI was the only marginally significant predictor (p = 0.0395).
+- The residual standard error remained high (43.59), indicating that the model struggled to explain `Cholesterol.Level` variability.
+- Compared to other imputation methods, MICE led to a more complex model without meaningful improvements in predictive accuracy.
+
+### **Implications:**
+- **Use simpler imputation methods:** Mode and KNN performed best, and MICE increased complexity without improving accuracy.
+- **MICE is beneficial when missing data is extensive;** for small amounts of missing data, single imputation methods work just as well.
+- **Investigate missing data mechanisms further;** MICE assumes MAR, which may not hold in this dataset.
+- **Consider non-linear models;** alternative modeling approaches may improve predictions.
+
+```{r}
+# Load necessary libraries
+library(tidyverse)
+library(mice)  # For Multiple Imputation
+library(broom) # For summarizing regression results
+
+# Apply Multiple Imputation using MICE
+set.seed(123)  # Ensures reproducibility
+mice_imputed <- mice(heart_df, method = "pmm", m = 5, maxit = 10)  # Predictive Mean Matching
+
+# Extract the first imputed dataset
+heart_df_mice <- complete(mice_imputed, 1)
+
+# Verify missing values after imputation
+colSums(is.na(heart_df_mice))
+
+# Fit a linear regression model on the MICE-imputed dataset
+lm_mice <- lm(Cholesterol.Level ~ Age + Gender + BMI + Blood.Pressure, data = heart_df_mice)
+mice_results <- summary(lm_mice)
+print(mice_results)
+
+# Using previously created datasets 
+heart_df_mode <- heart_df  # The Mode-Imputed dataset from Section 2
+heart_df_knn <- heart_df_knn  # The KNN-Imputed dataset from Section 2
+heart_df_reg <- subset_df  # The Regression-Imputed dataset from Section 3
+
+# Train the same regression model on each dataset
+lm_mode <- lm(Cholesterol.Level ~ Age + Gender + BMI + Blood.Pressure, data = heart_df_mode)
+lm_knn <- lm(Cholesterol.Level ~ Age + Gender + BMI + Blood.Pressure, data = heart_df_knn)
+lm_reg <- lm(Cholesterol.Level ~ Age + Gender + BMI + Blood.Pressure, data = heart_df_reg)
+
+# Compare Model Performance Across Imputed Datasets
+comparison_results <- tibble(
+  Dataset = c("Mode Imputation", "KNN Imputation", "Regression Imputation", "MICE Imputation"),
+  R_Squared = c(summary(lm_mode)$r.squared,
+                summary(lm_knn)$r.squared,
+                summary(lm_reg)$r.squared,
+                summary(lm_mice)$r.squared),
+  AIC = c(AIC(lm_mode), AIC(lm_knn), AIC(lm_reg), AIC(lm_mice))
+)
+
+# Print comparison results
+print(comparison_results)
+
+```
+
+#  **Insights and Recommendations**
+
+### **Insights:**
+- **Simpler imputation methods like Mode and KNN are preferable** as they performed best with minimal complexity.
+- **MICE is beneficial when missing data is extensive**, but in this case, it increased complexity without improving accuracy.
+- **Regression-Based Imputation showed marginal improvements** but is computationally expensive.
+- **Investigating the missing data mechanism is crucial** since MICE assumes MAR, which may not hold.
+- **Alternative models such as Random Forests or Generalized Additive Models (GAMs) should be explored** to improve predictions.
+
+### **Recommendations:**
+- **Use Mode or KNN Imputation for practical applications** where computational efficiency is required.
+- **Consider Regression-Based Imputation when missing values are highly structured** and have strong predictor relationships.
+- **For large missing data, MICE can be reconsidered**, but with additional validation.
+- **Enhance predictive modeling by incorporating more relevant variables** such as diet, genetics, and exercise patterns.
+- **Evaluate missing data patterns more rigorously** to determine the best imputation strategy.
+
+# **Conclusion**
+-The choice of imputation method had little effect on model performance, with Mode and KNN performing best.
+- Regression results indicate that BMI has a slight effect, but other key variables are missing from the dataset.
+-To improve predictions, more relevant predictors should be included, and non-linear models should be tested.
+-Understanding why data is missing can refine future imputation strategies.
+
+
+# Part 2
+
+# **Feature Transformation**
+
+## **Interpretation of Skewness Correction**
+Our analysis of numerical variables revealed **no highly skewed variables** (|skewness| < 1). This suggests that:
+- **Skewness correction is not necessary** since the data is already well-distributed.
+- No extreme skewness was found that would impact model assumptions.
+- Proceeding with feature transformations ensures consistency in scaling for machine learning models.
+
+```{r}
+# Load required packages
+library(tidyverse)
+library(e1071)  # For skewness function
+library(ggplot2)
+
+# Select only numerical features
+numeric_cols <- heart_df %>% select(where(is.numeric))
+
+# Compute skewness for each numerical variable
+skew_values <- sapply(numeric_cols, skewness, na.rm = TRUE)
+print(skew_values)
+
+# Identify highly skewed variables (absolute skewness > 1)
+highly_skewed <- names(skew_values[abs(skew_values) > 1])
+print(highly_skewed)  # List of highly skewed numerical variables
+
+```
+## **Interpretation of Feature Transformations**
+### **1. Scaling (Normalization)**
+Normalization rescales numerical variables between **[0,1]**. This is useful when:
+- Variables have different scales and need consistency.
+- Distance-based models (e.g., **KNN, clustering**) require all features to contribute equally.
+- It prevents features with larger values from dominating.
+
+**Results:**
+- Features now range from **0 to 1**, ensuring consistency.
+- Useful when maintaining relative distances between values.
+
+
+### **2. Standardization (Z-score Transformation)**
+Standardization transforms variables to have **mean = 0** and **standard deviation = 1**. It is important when:
+- Features need to follow a **normal distribution**.
+- Some models (**logistic regression, SVM, PCA**) assume standardized input.
+- The data contains outliers that normalization might not handle effectively.
+
+**Results:**
+- Standardized variables have a mean close to **0** and variance close to **1**.
+- Suitable for algorithms like **SVM, linear regression, and PCA**.
+
+---
+
+## **Implications**
+- **Scaling (Normalization) is best for distance-based models** such as KNN or clustering.
+- **Standardization is better for models that assume normality**, such as regression or SVM.
+- Applying the correct transformation technique improves **model stability and interpretability**.
+
+Both methods ensure that the numerical variables contribute effectively to model performance. The next step is **Feature Selection** to filter out unnecessary variables.
+
+```{r}
+library(caret)  # For preprocessing functions
+library(dplyr)
+
+# Select numerical columns
+numerical_cols <- heart_df %>% select(where(is.numeric))
+
+# Handle missing values: Replace NAs with column means
+numerical_cols_clean <- numerical_cols %>%
+  mutate(across(everything(), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+
+# Check for zero variance columns (which cause issues in scaling)
+zero_variance_cols <- names(numerical_cols_clean)[apply(numerical_cols_clean, 2, var) == 0]
+if (length(zero_variance_cols) > 0) {
+  cat("Removing zero variance columns:", zero_variance_cols, "\n")
+  numerical_cols_clean <- numerical_cols_clean %>% select(-all_of(zero_variance_cols))
+}
+
+# Apply Min-Max Scaling
+heart_df_scaled <- numerical_cols_clean %>%
+  mutate(across(everything(), ~ (.-min(.)) / (max(.) - min(.)), .names = "{.col}_scaled"))
+
+# Apply Standardization (Z-score)
+heart_df_standardized <- numerical_cols_clean %>%
+  mutate(across(everything(), ~ scale(.) %>% as.vector(), .names = "{.col}_standardized"))
+
+# Combine results for comparison
+transformed_df <- bind_cols(numerical_cols_clean, heart_df_scaled, heart_df_standardized)
+
+# View the first few rows of the transformed dataset
+print(head(transformed_df))
+
+```
+##  Feature Selection
+
+### **Findings**
+Feature selection was performed using three filtering techniques:
+1. **High Correlation Filtering**: No features had a correlation greater than **0.9**, meaning no multicollinear variables were detected.
+2. **Variance Inflation Factor (VIF) Check**: All features had VIF values below **10**, suggesting that there are no severe multicollinearity issues.
+3. **Near-Zero Variance Filtering**: No features had near-zero variance, meaning all retained features contribute meaningful information.
+
+As a result, **no features were removed**, and all features will be retained for further analysis.
+
+### **Results**
+- The dataset remains unchanged after feature selection.
+- Summary statistics confirm that all numerical variables have reasonable distributions.
+- Some missing values (`NA`s) were identified, but they do not impact feature selection at this stage.
+
+```{r}
+library(caret)
+library(car)  # For VIF calculation
+
+# Select only numerical features
+numerical_cols <- heart_df %>% select(where(is.numeric))
+
+# Compute correlation matrix
+cor_matrix <- cor(numerical_cols, use = "pairwise.complete.obs")
+
+# Identify highly correlated features (|r| > 0.9)
+high_corr_features <- findCorrelation(cor_matrix, cutoff = 0.9, names = TRUE)
+
+
+# Compute Variance Inflation Factor (VIF)
+vif_values <- vif(lm(Cholesterol.Level ~ ., data = numerical_cols))
+high_vif_features <- names(vif_values[vif_values > 10])
+
+
+# Identify near-zero variance features
+nzv_features <- nearZeroVar(numerical_cols, saveMetrics = TRUE)
+low_variance_features <- rownames(nzv_features[nzv_features$nzv, ])
+
+
+# Combine all features to be removed
+features_to_remove <- unique(c(high_corr_features, high_vif_features, low_variance_features))
+
+# Filter dataset by removing selected features
+filtered_df <- numerical_cols %>% select(-all_of(features_to_remove))
+
+# View summary of the filtered dataset
+summary(filtered_df)
+```
+
+## 4. Feature Creation
+```{r}
+# Identify categorical columns
+categorical_cols <- heart_df %>%
+  select(where(is.character), where(is.factor)) %>%
+  colnames()
+
+# Define threshold for sparse categories (5% of total observations)
+threshold <- 0.05 * nrow(heart_df)
+
+# Apply category regrouping for sparse categories
+heart_df_grouped <- heart_df %>%
+  mutate(across(all_of(categorical_cols), 
+                ~ ifelse(. %in% names(which(table(.) < threshold)), "Other", .),
+                .names = "{.col}_grouped"))
+
+# View transformed categorical features
+print(head(heart_df_grouped %>% select(ends_with("_grouped"))))
+```
+
+
+# **Discretization of Multi-Modal Variables**
+```{r}
+# Load required libraries
+library(dplyr)
+
+# Select numerical columns
+numerical_cols <- heart_df %>% select(where(is.numeric))
+
+# Define the number of bins
+num_bins <- 4  # You can adjust this based on the variable distribution
+
+# Apply Equal-Width Binning to a numerical variable (e.g., Age)
+heart_df <- heart_df %>%
+  mutate(Age_Binned_Equal = cut(Age, breaks = num_bins, labels = FALSE, include.lowest = TRUE))
+
+# Apply Quantile-Based Binning to another numerical variable (e.g., Cholesterol Level)
+heart_df <- heart_df %>%
+  mutate(Cholesterol_Binned_Quantile = cut(Cholesterol.Level, breaks = quantile(Cholesterol.Level, probs = seq(0, 1, length.out = num_bins + 1), na.rm = TRUE), include.lowest = TRUE, labels = c("Low", "Medium-Low", "Medium-High", "High")))
+
+# View the results
+print(head(heart_df %>% select(Age, Age_Binned_Equal, Cholesterol.Level, Cholesterol_Binned_Quantile)))
+```
+
+# **Feature Engineering with Model-Based Methods (K-Means Clustering)**
+
+## **Summary of Results**
+To enhance the dataset, we applied **K-Means Clustering** as a model-based feature engineering method to create a new categorical feature representing cluster memberships.
+
+### **Findings**
+- We determined the optimal number of clusters using the **Elbow Method**, which suggested an optimal **K = 3** based on the within-cluster sum of squares (WSS).
+- K-Means clustering was applied to **standardized numerical features**, ensuring equal weight in the clustering process.
+- A new **Cluster variable** was added to the dataset, categorizing individuals into three groups based on similarities in their feature values.
+
+### **Results**
+- The **Elbow Method plot** indicated that after **K = 3**, the reduction in WSS diminishes, suggesting three distinct clusters.
+- The new **Cluster feature** successfully segmented the dataset, with cluster assignments reflecting underlying data patterns.
+- Observations were grouped into clusters that may represent distinct subgroups of individuals based on health-related attributes such as **cholesterol level, BMI, blood pressure, and age**.
+
+
+```{r}
+# Select and standardize numerical columns
+numerical_cols <- heart_df %>% select(where(is.numeric))
+
+# Impute missing values using column means
+numerical_cols <- numerical_cols %>%
+  mutate(across(everything(), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+
+# Standardize numerical columns
+numerical_cols_scaled <- scale(numerical_cols)
+
+# Compute Within-Cluster Sum of Squares (WSS) for different k values
+set.seed(123)
+wss <- sapply(1:10, function(k) {
+  kmeans(numerical_cols_scaled, centers = k, nstart = 10)$tot.withinss
+})
+
+# Plot Elbow Method to determine the optimal number of clusters
+plot(1:10, wss, type = "b", pch = 19, frame = FALSE, 
+     xlab = "Number of Clusters (K)", ylab = "Total Within-Cluster Sum of Squares",
+     main = "Elbow Method for Optimal K")
+
+# Choose optimal K (from the elbow plot)
+optimal_k <- 3  # Adjust this based on the plot
+
+# Apply K-Means Clustering
+set.seed(123)
+kmeans_model <- kmeans(numerical_cols_scaled, centers = optimal_k, nstart = 25)
+
+# Add cluster labels to the original dataset
+heart_df$Cluster <- as.factor(kmeans_model$cluster)
+
+# View the first few rows with the new Cluster feature
+head(heart_df)
+```
+# **Principal Component Analysis (PCA)**
+
+## **Findings**
+- PCA was performed on the numerical features to reduce dimensionality and transform correlated variables into uncorrelated principal components.
+- The importance of components table indicates how much variance each principal component captures.
+- The first few principal components explain the majority of the variance in the dataset.
+
+## **Results**
+- **Standard deviation of components:** The first few PCs have higher standard deviations, meaning they retain most of the dataset’s variability.
+- **Proportion of variance explained:**
+  - PC1: **11.61%**
+  - PC2: **11.56%**
+  - PC3: **11.44%**
+  - PC4: **11.13%**
+  - Cumulatively, the first **six components** capture around **67.72%** of the total variance.
+- **Cumulative variance:** The first **six to seven** components explain most of the variance, indicating that dimensionality can be reduced effectively.
+
+## **Implications**
+- **Dimensionality Reduction:** The dataset can be represented using fewer components while retaining most of its information.
+- **Improved Model Performance:** Reducing the number of features can help prevent overfitting and speed up model training.
+- **Interpretability:** Since the first few principal components retain most of the information, focusing on them simplifies analysis.
+```{r}
+# Select only numerical features
+numerical_cols <- heart_df %>% select(where(is.numeric))
+
+# Handle missing values by imputing with column means
+numerical_cols <- numerical_cols %>%
+  mutate(across(everything(), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+
+# Standardize the data (important for PCA)
+numerical_cols_scaled <- scale(numerical_cols)
+
+# Apply PCA
+pca_model <- prcomp(numerical_cols_scaled, center = TRUE, scale. = TRUE)
+
+# View summary of PCA results
+summary(pca_model)
+```
+
+
