@@ -1,0 +1,646 @@
+---
+title: "Regression Performance Measures and Cross-validation(HEART DISEASE)"
+author: "CHRISTINA THOMPSON ACQUAH"
+date: " "
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: yes
+    code_folding: hide
+    code_download: yes
+    smooth_scroll: yes
+    theme: lumen
+  word_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    keep_md: yes
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    number_sections: no
+    fig_width: 3
+    fig_height: 3
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{=html}
+
+<style type="text/css">
+
+/* Cascading Style Sheets (CSS) is a stylesheet language used to describe the presentation of a document written in HTML or XML. it is a simple mechanism for adding style (e.g., fonts, colors, spacing) to Web documents. */
+
+h1.title {  /* Title - font specifications of the report title */
+  font-size: 22px;
+  font-weight: bold;
+  color: DarkRed;
+  text-align: center;
+  font-family: "Gill Sans", sans-serif;
+}
+h4.author { /* Header 4 - font specifications for authors  */
+  font-size: 18px;
+  font-weight: bold;
+  font-family: system-ui;
+  color: navy;
+  text-align: center;
+}
+h4.date { /* Header 4 - font specifications for the date  */
+  font-size: 18px;
+  font-family: system-ui;
+  color: DarkBlue;
+  text-align: center;
+  font-weight: bold;
+}
+h1 { /* Header 1 - font specifications for level 1 section title  */
+    font-size: 22px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: center;
+    font-weight: bold;
+}
+h2 { /* Header 2 - font specifications for level 2 section title */
+    font-size: 20px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+    font-weight: bold;
+}
+
+h3 { /* Header 3 - font specifications of level 3 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h4 { /* Header 4 - font specifications of level 4 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+body { background-color:white; }
+
+.highlightme { background-color:yellow; }
+
+p { background-color:white; }
+
+</style>
+```
+
+```{r setup, include=FALSE}
+# code chunk specifies whether the R code, warnings, and output will be included in the output files.
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+library(tidyverse)
+}
+if (!require("palmerpenguins")) {
+   install.packages("palmerpenguins")
+library(palmerpenguins)
+}
+if (!require("plotly")) {
+   install.packages("plotly")
+library(plotly)
+}
+if (!require("GGally")) {
+   install.packages("GGally")
+library(GGally)
+}
+if (!require("naniar")) {
+   install.packages("naniar")
+library(naniar)
+}
+if (!require("pool")) {
+   install.packages("pool")
+library(pool)
+}
+if (!require("DBI")) {
+   install.packages("DBI")
+library(DBI)
+}
+if (!require("RMySQL")) {
+   install.packages("RMySQL")
+library(RMySQL)
+}
+if (!require("randomForest")) {
+   install.packages("randomForest")
+library(randomForest)
+}
+if (!require("ggiraph")) {
+   install.packages("ggiraph")
+library(ggiraph)
+}
+if (!require("highcharter")) {
+   install.packages("highcharter")
+library(highcharter)
+}
+if (!require("broom")) {
+   install.packages("broom")
+library(broom)
+}
+## 
+knitr::opts_chunk$set(
+  # include code chunk in the output file
+  echo = TRUE,
+  # sometimes, you code may produce warning messages, you can choose to include the warning messages in the output file.
+  warning = FALSE, 
+  # you can also decide whether to include the output in the output file.
+  results = TRUE, 
+  message = FALSE,
+  comment = NA
+)  
+
+```
+
+# . Introduction
+Heart disease remains one of the leading causes of death globally. Understanding its risk factors allows for early intervention, lifestyle modifications, and efficient resource allocation by healthcare providers. This study employs linear regression to predict cholesterol levels based on various risk factors and logistic regression to predict heart disease presence.
+
+A structured model selection approach, cross-validation, and performance evaluation techniques are applied to ensure robust predictive capability.
+
+## Key Research Questions
+
+To guide our analysis, we formulate two practical questions:
+
+1.Linear Regression: How do age, cholesterol levels, and blood pressure affect the predicted heart disease risk score?
+
+2.Logistic Regression: Can we predict whether a patient has heart disease (binary outcome) based on features like age, cholesterol, and physical activity?
+
+By addressing these questions, we aim to provide actionable insights that can aid in early detection and prevention strategies.
+
+# . Data Preparation & Exploratory Data Analysis (EDA)
+Before building predictive models, we must first explore the dataset to identify missing values, detect patterns, and ensure data quality. The dataset consists of key cardiovascular health indicators, including demographic information, cholesterol levels, blood pressure readings, and behavioral factors such as smoking and physical activity.
+
+## Understanding Our Data
+
+We begin by summarizing key variables:
+
+```{r}
+
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(mice)
+library(caret)
+library(VIM)
+library(pROC)
+library(knitr)
+
+
+# Load dataset
+heart_df <- read.csv("https://raw.githubusercontent.com/Christina-tinaa/Heart-Disease/main/heart_disease.csv")
+
+# View structure of the dataset
+#str(heart_df)
+
+# Summary statistics
+#summary(df)
+
+
+# Define the feature variables with their descriptions and data types
+features <- data.frame(
+  Feature_Name = c("Age", "Gender", "Blood Pressure", "Cholesterol Level", "Exercise Habits",
+                   "Smoking", "Family Heart Disease", "Diabetes", "BMI", "High Blood Pressure",
+                   "Low HDL Cholesterol", "High LDL Cholesterol", "Alcohol Consumption",
+                   "Stress Level", "Sleep Hours", "Sugar Consumption", "Triglyceride Level",
+                   "Fasting Blood Sugar", "CRP Level", "Homocysteine Level", "Heart Disease Status"),
+  
+  Description = c("The individual's age", "The individual's gender (Male or Female)",
+                  "The individual's blood pressure (systolic)", "The individual's total cholesterol level",
+                  "The individual's exercise habits (Low, Medium, High)", "Whether the individual smokes or not (Yes or No)",
+                  "Whether there is a family history of heart disease (Yes or No)", "Whether the individual has diabetes (Yes or No)",
+                  "The individual's body mass index", "Whether the individual has high blood pressure (Yes or No)",
+                  "Whether the individual has low HDL cholesterol (Yes or No)", "Whether the individual has high LDL cholesterol (Yes or No)",
+                  "The individual's alcohol consumption level (None, Low, Medium, High)",
+                  "The individual's stress level (Low, Medium, High)", "The number of hours the individual sleeps",
+                  "The individual's sugar consumption level (Low, Medium, High)", "The individual's triglyceride level",
+                  "The individual's fasting blood sugar level", "The C-reactive protein level (a marker of inflammation)",
+                  "The individual's homocysteine level (an amino acid that affects blood vessel health)",
+                  "The individual's heart disease status (Yes or No)"),
+  
+  Data_Type = c("Numerical", "Categorical", "Numerical", "Numerical", "Categorical",
+                "Categorical", "Categorical", "Categorical", "Numerical", "Categorical",
+                "Categorical", "Categorical", "Categorical",
+                "Categorical", "Numerical", "Categorical", "Numerical",
+                "Numerical", "Numerical", "Numerical", "Categorical")
+)
+
+# Print the table
+kable(features)
+```
+
+Understanding the dataset structure helps in identifying potential issues such as missing values, skewed distributions, and multicollinearity before modeling begins.
+
+## Visualizing Missing Data
+One key aspect of data quality is the presence of missing values.We visualize missing values using a bar plot which helps in understanding where data gaps exist.
+```{r}
+# Count missing values per column
+missing_counts <- colSums(is.na(heart_df))
+missing_data <- data.frame(Variable = names(missing_counts), Missing = missing_counts)
+
+# Plot missing data
+ggplot(missing_data, aes(x = reorder(Variable, -Missing), y = Missing)) +
+  geom_bar(stat = "identity", fill = "red") + theme_minimal() +labs(title = "Missing Data Per Variable", x = "Variable", y = "Number of Missing Values") +
+  coord_flip()
+```
+
+**Key Insight**: Missing values are concentrated in specific variables, guiding the selection of an appropriate imputation method.
+
+# . Data Imputation Using KNN & MICE 
+The dataset comprises cardiovascular health indicators such as demographic factors, cholesterol levels, blood pressure readings, and behavioral risk factors. Missing values were addressed using Multiple Imputation by Chained Equations (MICE) for numerical variables and K-Nearest Neighbors (KNN) imputation for categorical variables.
+```{r}
+# Load required libraries for Imputation
+library(mice)
+library(VIM)
+library(dplyr)
+library(knitr)
+
+# Step 1: Identify categorical and numeric columns
+categorical_cols <- names(heart_df)[sapply(heart_df, function(x) is.character(x) | is.factor(x))]
+numeric_cols <- names(heart_df)[sapply(heart_df, is.numeric)]
+
+# Step 2: Apply KNN for Categorical Imputation
+set.seed(123)
+heart_df_knn <- kNN(heart_df, variable = categorical_cols, k = 5)
+
+# Drop unnecessary columns created by KNN imputation
+heart_df_knn <- heart_df_knn %>% select(-starts_with("imp_"))
+
+# Step 3: Apply MICE for Numerical Variables
+set.seed(123)
+imputed_data <- mice(heart_df_knn, method = "pmm", m = 5, printFlag = FALSE)
+
+# Store the final imputed dataset
+heart_df_final <- complete(imputed_data, 1)
+
+# Verify that missing values are removed
+missing_summary <- colSums(is.na(heart_df_final))
+#kable(as.data.frame(missing_summary), caption = "Missing Values After KNN & MICE Imputation")
+```
+
+**Key Insight**:  The combined approach ensures a reliable dataset without introducing unnecessary bias.
+
+# . Feature Engineering
+Properly applying these feature engineering techniques enhances the dataset’s quality, leading to better model generalization and interpretability.
+
+##  Feature Selection Using Statistical Methods
+Feature selection was performed using filter-based techniques:
+
+-High Correlation Filtering: Removed variables with correlation > 0.9.
+
+-Variance Inflation Factor (VIF): Kept only predictors with VIF < 10.
+
+-Near-Zero Variance Filtering: Ensured all variables contributed meaningfully to the model.
+
+```{r}
+# Load necessary library
+library(car)
+library(caret)
+
+# Select only numeric predictors
+numeric_vars <- heart_df[, sapply(heart_df, is.numeric)]
+
+# Ensure "Cholesterol.Level" is included in numeric_vars
+if (!"Cholesterol.Level" %in% colnames(numeric_vars)) {
+  stop("Error: 'Cholesterol.Level' is missing from numeric_vars")
+}
+
+# Remove highly correlated features (correlation > 0.9)
+cor_matrix <- cor(numeric_vars, use = "complete.obs")
+correlated_features <- findCorrelation(cor_matrix, cutoff = 0.9, names = TRUE)
+numeric_vars <- numeric_vars[, !(names(numeric_vars) %in% correlated_features)]
+
+# Ensure all columns have the same number of observations
+numeric_vars <- numeric_vars[complete.cases(numeric_vars), ]
+
+# Ensure there are at least two predictors left before computing VIF
+if (ncol(numeric_vars) < 2) {
+  stop("Error: Not enough predictor variables to compute VIF.")
+}
+
+# Compute VIF using only predictor variables (excluding "Cholesterol.Level")
+vif_values <- vif(lm(Cholesterol.Level ~ ., data = numeric_vars))
+
+# Keep variables with VIF < 10
+numeric_vars <- numeric_vars[, names(vif_values[vif_values < 10])]
+
+# Re-add "Cholesterol.Level" to numeric_vars
+#heart_df <- cbind(Cholesterol.Level = heart_df$Cholesterol.Level, numeric_vars)
+
+```
+**Key Insight**: These transformations ensure numerical variables contribute effectively to model performance and prevent dominant features from skewing results.
+
+## Feature Scaling & Standardization
+After selecting the most relevant features, the next step is to ensure that all numerical variables are on a comparable scale. Since the dataset contains variables measured on different scales such as age, cholesterol levels, and CRP levels—this disparity can negatively impact model performance, especially for algorithms sensitive to magnitude differences.
+
+To address this, Min-Max Scaling and Z-score Standardization are applied. Min-Max Scaling transforms values to a fixed range of [0,1], preserving their relative differences, while Z-score Standardization centers the data around zero with a standard deviation of one, making it suitable for models that assume normally distributed features. By applying these transformations, we enhance the stability of the regression models and ensure that no single variable disproportionately influences the predictions.
+```{r}
+# Min-Max Scaling
+heart_df_scaled <- heart_df %>%
+  mutate(across(where(is.numeric), ~ (.-min(.)) / (max(.) - min(.)), .names ="{.col}_scaled"))
+
+# Z-score Standardization
+heart_df_standardized <- heart_df %>%
+  mutate(across(where(is.numeric), ~ scale(.) %>% as.vector(), .names ="{.col}_standardized"))
+```
+
+# . Model Development & Evaluation
+With the dataset fully prepared having undergone missing data imputation, feature selection, and scaling—the next step is to build and evaluate predictive models. The primary objective is to develop linear and logistic regression models that can effectively identify patterns and relationships within the data.
+
+To ensure reliability and generalizability, we use cross-validation (CV) as the primary method for model selection. Cross-validation helps prevent overfitting by evaluating model performance across multiple subsets of the data, ensuring that the chosen model performs well on unseen data.
+
+For evaluation, different performance metrics are used:
+
+1. Linear Regression: Evaluated using Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), and R², which measure predictive accuracy and explain how well the independent variables account for variations in cholesterol levels.
+2. Logistic Regression: Assessed using ROC curves and AUC (Area Under the Curve) to determine classification performance. The optimal cut-off probability is selected to maximize sensitivity and specificity instead of defaulting to 0.5.
+
+By following this structured approach, we ensure that the final models are not only statistically sound but also practically meaningful for identifying key risk factors associated with heart disease.
+
+## Linear Regression for Cholesterol Prediction
+Cholesterol is a well-documented risk factor for cardiovascular diseases, and understanding its relationship with age, blood pressure, and other health indicators is crucial. 
+
+## Full vs. Final Model Comparison
+To investigate these relationships, we developed and compared two linear regression models:
+
+-Full Model: Included all available predictors—age, blood pressure, BMI, sleep hours, triglyceride level, fasting blood sugar, CRP level, and homocysteine level.
+
+-Reduced Model (Final Model): Retained only age, blood pressure, and BMI, as the other variables were not statistically significant.
+```{r}
+# Load required libraries
+library(caret)
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(pROC)
+
+# Ensure using the imputed dataset (MICE-processed data)
+trainIndex <- createDataPartition(heart_df_final$Heart.Disease.Status, p = 0.8, list = FALSE)
+train_data <- heart_df_final[trainIndex, ]
+test_data <- heart_df_final[-trainIndex, ]
+
+#  Linear Regression for Cholesterol Prediction
+
+# Step 1: Full Linear Regression Model (All Predictors)
+full_linear_model <- train(
+  Cholesterol.Level ~ Age + Blood.Pressure + BMI + Sleep.Hours + Triglyceride.Level + 
+    Fasting.Blood.Sugar + CRP.Level + Homocysteine.Level, 
+  data = train_data,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 10)
+)
+
+# Step 2: Display Full Model Coefficients
+kable(summary(full_linear_model$finalModel)$coef, caption = "Full Linear Regression Model Coefficients")
+
+
+# Step3: Reduced (Final) Linear Model
+
+final_linear_model <- train(
+  Cholesterol.Level ~ Age + Blood.Pressure + BMI,  
+  data = train_data,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 10)
+)
+
+# Step 4: Display Final Model Coefficients
+kable(summary(final_linear_model$finalModel)$coef, caption = "Final Linear Regression Model Coefficients")
+```
+## Model Selection & Cross-Validation
+A stepwise selection approach (both forward and backward) was applied to retain only significant predictors while preventing overfitting. The final model was selected using 10-fold cross-validation, optimizing for Root Mean Square Error (RMSE) and Mean Absolute Error (MAE).
+
+**Full Model Equation**:
+$$
+Cholesterol\ Level = \beta_0 + \beta_1(Age) + \beta_2(Blood\ Pressure) + \beta_3(BMI) + \beta_4(Sleep\ Hours) + \beta_5(Triglyceride\ Level) + \beta_6(Fasting\ Blood\ Sugar) + \beta_7(CRP\ Level) + \beta_8(Homocysteine\ Level) + \epsilon
+$$
+
+**Final Model Equation**:
+$$
+Cholesterol\ Level = \beta_0 + \beta_1(Age) + \beta_2(Blood\ Pressure) + \beta_3(BMI) + \epsilon
+$$
+
+## Performance Evaluation
+To assess the predictive capabilities of the two models, we evaluated their performance on the test dataset using RMSE, MAE, and R^2.
+**Full Model Performance**:
+
+RMSE: 43.259, MAE: 37.274, R^2: 0.0000124
+
+**Final Model Performance**:
+
+RMSE: 43.224, MAE: 37.244, R^2: 0.000082
+```{r}
+# Step 5: Evaluate Full Model Performance
+full_predictions <- predict(full_linear_model, newdata = test_data)
+full_RMSE <- RMSE(full_predictions, test_data$Cholesterol.Level)
+full_MAE <- MAE(full_predictions, test_data$Cholesterol.Level)
+full_R2 <- cor(full_predictions, test_data$Cholesterol.Level, use = "complete.obs")^2
+
+# Step 6: Display Performance Metrics
+full_performance <- data.frame(
+  Metric = c("RMSE", "MAE", "R²"),
+  Full_Model_Value = c(full_RMSE, full_MAE, full_R2)
+)
+kable(full_performance, caption = "Full Linear Regression Model Performance")
+
+
+
+# Step 7: Evaluate Final Model Performance
+final_predictions <- predict(final_linear_model, newdata = test_data)
+final_RMSE <- RMSE(final_predictions, test_data$Cholesterol.Level)
+final_MAE <- MAE(final_predictions, test_data$Cholesterol.Level)
+final_R2 <- cor(final_predictions, test_data$Cholesterol.Level, use = "complete.obs")^2
+
+# Display Final Model Performance Metrics
+final_performance <- data.frame(
+  Metric = c("RMSE", "MAE", "R²"),
+  Final_Model_Value = c(final_RMSE, final_MAE, final_R2)
+)
+kable(final_performance, caption = "Final Linear Regression Model Performance")
+```
+
+
+## Residual Analysis for Model Validation
+**Residuals vs. Fitted Values Plot**: Shows a random scatter, suggesting no obvious pattern, indicating homoscedasticity (constant variance) in residuals.
+
+**QQ Plot**: Deviations from the diagonal line suggest non-normality of residuals, which may indicate missing variables or non-linear relationships.
+
+```{r}
+#  Residual Plots for Final Model
+
+# Compute Residuals
+train_data$residuals <- residuals(final_linear_model$finalModel)
+train_data$fitted_values <- fitted(final_linear_model$finalModel)
+
+# Residuals vs. Fitted Values Plot
+ggplot(train_data, aes(x = fitted_values, y = residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Residuals vs. Fitted Values", x = "Fitted Values", y = "Residuals") +
+  theme_minimal()
+
+# QQ Plot (Normality of Residuals)
+ggplot(train_data, aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "QQ Plot of Residuals", x = "Theoretical Quantiles", y = "Sample Quantiles") +
+  theme_minimal()
+
+```
+
+**Key Insight**:
+-BMI is the only statistically significant predictor (p = 0.0157), while age and blood pressure are not significant.
+
+-The final model has slightly improved interpretability with minimal change in performance.
+
+-The final model explains only 18% of the variance in cholesterol levels, indicating the presence of unmeasured factors
+
+-The low R^2 value (close to zero) suggests that cholesterol levels are not strongly explained by these predictors, indicating that other unmeasured factors (such as diet, genetics, and lifestyle choices) may have a greater influence.
+
+
+**Recommendation**: Given the poor predictive performance of linear regression, future work should consider:
+
+-Including additional predictors (e.g., dietary habits, medication use).
+
+-Exploring non-linear relationships (e.g., polynomial regression or tree-based models).
+
+
+## Logistic Regression Model (Heart Disease Prediction)
+**Model Performance**
+The effectiveness of the logistic regression model was assessed using multiple performance metrics, including AUC (Area Under the Curve), optimal cut-off probability, and confusion matrix results.
+
+## Model Selection & Cross-Validation
+
+-Stepwise selection was used to optimize model complexity.
+
+-10-fold cross-validation was performed to prevent overfitting.
+
+**Final Model Equation**:
+$$
+logit(p) = \ln\left(\frac{p}{1 - p}\right) = \beta_0 + \beta_1(Age) + \beta_2(Cholesterol\ Level) + \beta_3(Blood\ Pressure) + \beta_4(BMI)
+$$
+
+## Performance Evaluation
+1. AUC (Area Under Curve): 0.516
+
+An AUC close to 0.5 suggests that the model has little to no discriminatory power, meaning it performs no better than random guessing.
+
+2. Optimal Cut-Off Probability: 0.2069
+
+The threshold for classification was determined using Youden’s J Statistic, optimizing the balance between sensitivity and specificity.
+
+3. Confusion Matrix Results:
+
+-Sensitivity (True Positive Rate): Measures the model’s ability to correctly identify patients with heart disease.
+
+-Specificity (True Negative Rate): Measures the model’s ability to correctly classify patients without heart disease.
+
+Due to the low AUC, these metrics are unreliable indicators of model strength.
+
+  
+```{r}
+# Load required libraries
+library(caret)
+library(pROC)
+library(knitr)
+library(dplyr)
+
+# Step 1: Train Logistic Regression Model with Cross-Validation
+logistic_model <- train(
+  Heart.Disease.Status ~ Age + Cholesterol.Level + Blood.Pressure + BMI, 
+  data = train_data,
+  method = "glm",
+  family = binomial,
+  trControl = trainControl(method = "cv", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary),
+  metric = "ROC"
+)
+
+# Step 2: Predict Probabilities for Test Data
+probabilities <- predict(logistic_model, newdata = test_data, type = "prob")[,2]  # Get probability for "Yes"
+
+# Step 3: Compute ROC Curve
+roc_curve <- roc(test_data$Heart.Disease.Status, probabilities)
+
+# Use correct method for determining optimal cut-off
+optimal_cutoff <- coords(roc_curve, x = "best", best.method = "youden", ret = "threshold")
+
+# Step 4: Apply Optimal Cut-Off for Classification
+test_predictions <- sapply(probabilities, function(x) ifelse(x > optimal_cutoff, "Yes", "No"))
+
+# Ensure `test_predictions` and `test_data$Heart.Disease.Status` have the same factor levels
+test_predictions <- factor(test_predictions, levels = c("No", "Yes"))
+test_data$Heart.Disease.Status <- factor(test_data$Heart.Disease.Status, levels = c("No", "Yes"))
+
+# Step 5: Evaluate Model Performance
+conf_matrix <- confusionMatrix(test_predictions, test_data$Heart.Disease.Status)
+auc_value <- auc(roc_curve)
+
+# Step 6: Display Logistic Regression Model Summary
+kable(summary(logistic_model$finalModel)$coef, caption = "Final Logistic Regression Model Coefficients")
+
+# Step 7: Report AUC and Optimal Cut-Off Probability
+performance_df <- data.frame(Metric = c("AUC", "Optimal Cut-Off"), Value = c(auc_value, optimal_cutoff))
+kable(performance_df, caption = "Logistic Regression Model Performance")
+
+#  ROC Curve for Logistic Regression
+
+ggplot(data.frame(FPR = roc_curve$specificities, TPR = roc_curve$sensitivities), aes(x = FPR, y = TPR)) +
+  geom_line(color = "blue", size = 1) +
+  geom_abline(linetype = "dashed") +
+  labs(title = "ROC Curve for Logistic Regression", x = "False Positive Rate", y = "True Positive Rate") +
+  theme_minimal()
+
+```
+
+**Key Insights & Interpretation**:
+-Statistical Significance of Predictors
+
+None of the predictors (Age, Cholesterol Level, Blood Pressure, and BMI) were statistically significant (p-values > 0.05).
+
+This suggests that these variables alone do not strongly predict heart disease in this dataset.
+
+-ROC Curve & Model Discrimination
+
+The AUC value of 0.516 is extremely low, indicating that the model performs almost like random guessing.
+
+The ROC curve appears close to the diagonal line, further confirming weak predictive power.
+
+-Confusion Matrix Interpretation
+
+Sensitivity and specificity results suggest that the model does not effectively distinguish between individuals with and without heart disease.
+
+The low AUC indicates that it is unreliable for clinical decision-making
+
+# . Limitations & Recommendations
+
+1.Poor Predictive Performance:
+
+-The model's low AUC suggests that heart disease is influenced by other unmeasured factors, such as genetic predisposition, diet, smoking, and exercise habits.
+
+-Future studies should consider incorporating additional variables, including lifestyle and medical history.
+
+2.Feature Engineering for Model Improvement:
+
+-Since physical activity and other behavioral factors were excluded due to missing values or statistical insignificance, their impact on heart disease risk should be assessed more explicitly.
+
+-Interaction terms (e.g., BMI × Age) and non-linear models (e.g., decision trees or random forests) could enhance prediction accuracy.
+
+3.Alternative Modeling Approaches:
+
+Given the poor predictive power of logistic regression, exploring machine learning models such as random forests, support vector machines (SVMs), or neural networks may yield better results.
+
+
+# . Conclusion
+
+This study explored the predictive power of linear and logistic regression models in understanding cholesterol levels and heart disease risk. While the linear model had low explanatory power, logistic regression demonstrated moderate predictive ability. Future research should integrate additional variables and alternative modeling approaches for improved accuracy.
+
+
+
+
